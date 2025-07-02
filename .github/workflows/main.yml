@@ -96,8 +96,8 @@ jobs:
   ## Push to Dev → Docker Build & Push
   #############################################
 
-  build-and-push:
-    runs-on: ubuntu-latest
+  build-and-push-frontend:
+    runs-on: runner1
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -141,6 +141,33 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/frontend:${{ steps.set.outputs.tag }}
 
+
+
+  build-and-push-backends:
+    runs-on: runner-2
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Set Docker image tag
+        id: set
+        run: |
+          if [[ "${GITHUB_REF}" =~ ^refs/tags/ ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+            echo "tag=${VERSION}" >> $GITHUB_OUTPUT
+            echo "latest=latest" >> $GITHUB_OUTPUT
+          else
+            SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-6)
+            echo "tag=dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
       - name: Lint & security checks (backend1)
         run: |
           ROOT_DIR=$(git rev-parse --show-toplevel)
@@ -180,3 +207,8 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/backend2:${{ steps.set.outputs.tag }}
+
+  
+
+
+  
